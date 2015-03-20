@@ -1,6 +1,5 @@
 # coding: utf-8
 require 'rails_helper'
-require 'rake'
 
 describe Topic, :type => :model do
   let(:topic) { FactoryGirl.create(:topic) }
@@ -205,7 +204,7 @@ describe Topic, :type => :model do
 
   describe "#log_replyed" do
     let(:t) { Factory(:topic) }
-    # let(:r) { Factory :reply, :topic => t }
+
     before(:each) do
       $redis.flushall
     end
@@ -222,7 +221,7 @@ describe Topic, :type => :model do
 
   describe "#log_reply_deleted" do
     let(:t) { Factory(:topic) }
-    # let(:r) { Factory :reply, :topic => t }
+
     before(:each) do
       $redis.flushall
     end
@@ -255,9 +254,6 @@ describe Topic, :type => :model do
     let(:t6) { FactoryGirl.create(:topic, :created_at => Time.now - 5.day) }
     let(:t7) { FactoryGirl.create(:topic, :created_at => Time.now - 6.day) }
 
-    load File.expand_path("../../../lib/tasks/hot_topic.rake", __FILE__)
-    Rake::Task.define_task(:environment)
-
     before(:each) do
       $redis.flushall
     end
@@ -276,24 +272,20 @@ describe Topic, :type => :model do
         hash = $redis.hgetall("topic_reply:#{Time.now.strftime('%Y%m%d')}")
         expect(hash["topic:#{t1.id}"]).to eq("1")
         expect(hash["topic:#{t7.id}"]).to eq("7")
-        Rake::Task['hot_topic:count_hot_weekly'].invoke
+        Topic.calculate_hot_weekly
         expect([t7.id,t6.id,t5.id,t4.id,t3.id,t2.id,t1.id].map(&:to_s))
           .to eq($redis.zrevrange("current_hot_weekly", 0, 6))
       end
     end
 
-    # FIXME: it looks that two rake task will affect each other
-    # context "not first time calculate" do
-    #   it "should delete old data" do
-    #
-    #     $redis.zadd("current_hot_weekly", 1118, 18)
-    #     $redis.zadd("current_hot_weekly", 1120, 20)
-    #
-    #     Rake::Task['hot_topic:count_hot_weekly'].invoke
-    #     expect($redis.zrevrange("current_hot_weekly", 0, 1)). to eq([])
-    #
-    #   end
-    # end
+    context "not first time calculate" do
+      it "should delete old data" do
+        $redis.zadd("current_hot_weekly", 1118, 18)
+        $redis.zadd("current_hot_weekly", 1120, 20)
+        Topic.calculate_hot_weekly
+        expect($redis.zrevrange("current_hot_weekly", 0, 1)). to eq([])
+      end
+    end
   end
 
 end
