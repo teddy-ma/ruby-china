@@ -167,8 +167,8 @@ class Topic
   end
 
   def log_replyed
-    $redis.hincrby "topic_reply:#{Time.now.strftime('%Y%m%d')}",  "topic:#{self.id}", 1
-    $redis.hincrby "topic_view:#{Time.now.strftime('%Y%m%d%H')}", "topic:#{self.id}", 1
+    $redis.hincrby "topic_reply:#{Time.now.strftime('%Y%m%d')}",   "topic:#{self.id}", 1
+    $redis.hincrby "topic_reply:#{Time.now.strftime('%Y%m%d%H')}", "topic:#{self.id}", 1
   end
 
   # 删除回复的话需要删除回帖创建时间的 key

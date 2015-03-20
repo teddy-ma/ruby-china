@@ -212,8 +212,10 @@ describe Topic, :type => :model do
     context "when the topic is first time replyed" do
       it "should work" do
         t.log_replyed
-        hash = $redis.hgetall("topic_reply:#{Time.now.strftime('%Y%m%d')}")
-        expect(hash["topic:#{t.id}"]).to eq("1")
+        hash_weekly = $redis.hgetall("topic_reply:#{Time.now.strftime('%Y%m%d')}")
+        hash_daily = $redis.hgetall("topic_reply:#{Time.now.strftime('%Y%m%d%H')}")
+        expect(hash_weekly["topic:#{t.id}"]).to eq("1")
+        expect(hash_daily["topic:#{t.id}"]).to eq("1")
       end
     end
   end
