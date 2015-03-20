@@ -173,43 +173,10 @@ class Topic
 
   # 删除回复的话需要删除回帖创建时间的 key
   def log_reply_deleted(replyed_at)
-    $redis.hincrby "topic_reply:#{replyed_at.strftime('%Y%m%d')}",   "topic:#{self.id}", -1
-    $redis.hincrby "topic_reply:#{replyed_at.strftime('%Y%m%d%H')}", "topic:#{self.id}", -1
+    key_weekly = replyed_at.strftime('%Y%m%d')
+    key_daily  = replyed_at.strftime('%Y%m%d%H')
+    $redis.hincrby("topic_reply:#{key_weekly}",   "topic:#{self.id}", -1) if $redis.exists("topic_reply:#{key_weekly}")
+    $redis.hincrby("topic_reply:#{key_daily}" , "topic:#{self.id}", -1)   if $redis.exists("topic_reply:#{key_daily}")
   end
 
-  # def self.calculate_hot_weekly
-  #   today = Time.now.to_date
-  #   a_week_ago = today - 6
-  #   hash = Hash.new
-  #   (a_week_ago..today).each_with_index do |date, i|
-  #     calculate_by_datetime_from_redis(hash, date, i, '%Y%m%d')
-  #   end
-  #   # 这个 hash 按照 value 的值排序， 或者直接扔 redis 里让 redis 帮忙排序
-  #   hash.map { |k,v| $redis.zadd "current_hot_weekly", v, k.split(":").last }
-  #   # 取的时候直接 zrange current_hot_weekly 0 99
-  # end
-  #
-  # def self.calculate_hot_daily
-  #   hash = Hash.new
-  #   (DateTime.now - 1.day).step((DateTime.now), 1.0/24).each_with_index do |date_with_hour, i|
-  #     calculate_by_datetime_from_redis(hash, date_with_hour, i, '%Y%m%d%H')
-  #   end
-  #   hash.map { |k,v| $redis.zadd "current_hot_daily", v, k.split(":").last }
-  # end
-  #
-  # def self.say_hello
-  #   logger.info "hello log"
-  #   puts "hello puts"
-  # end
-  #
-  # private
-  #
-  # def self.calculate_by_datetime_from_redis(ret, date, coefficient, time_format)
-  #   reply_hash = $redis.hgetall "topic_reply:#{date.strftime(time_format)}"
-  #   reply_hash = reply_hash.map { |k, v| [k, v.to_i * ( coefficient + 1 ) * 3] }.to_h
-  #   ret.merge!(reply_hash){|key, first, second| first + second }
-  #   view_hash = $redis.hgetall "topic_view:#{date.strftime(time_format)}"
-  #   view_hash = view_hash.map { |k, v| [k, v.to_i * ( coefficient + 1 )] }.to_h
-  #   ret.merge!(view_hash){|key, first, second| first + second }
-  # end
 end

@@ -8,11 +8,6 @@ namespace :hot_topic do
   task count_hot_daily: :environment do
     calculate_hot_daily
   end
-
-  desc "just say hello"
-  task say_hello: :environment do
-    say_hello
-  end
 end
 
 def calculate_hot_weekly
@@ -33,12 +28,6 @@ def calculate_hot_daily
     calculate_by_datetime_from_redis(hash, date_with_hour, i, '%Y%m%d%H')
   end
   hash.map { |k,v| $redis.zadd "current_hot_daily", v, k.split(":").last }
-end
-
-def say_hello
-  # logger.info "hello log"
-  # puts "hello puts"
-  File.open("/tmp/abc.txt", 'w+') {|f| f.write("write your stuff here #{Time.now}") }
 end
 
 private

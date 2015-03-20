@@ -218,6 +218,34 @@ describe Topic, :type => :model do
     end
   end
 
+  describe "#log_reply_deleted" do
+    let(:t) { Factory(:topic) }
+    # let(:r) { Factory :reply, :topic => t }
+    before(:each) do
+      $redis.flushall
+    end
+
+    context "when the redis key exists" do
+      it "should minus one" do
+
+        available_time = Time.now - 1.day
+        $redis.hset("topic_reply:#{available_time.strftime('%Y%m%d')}", "topic:#{t.id}", "12")
+        t.log_reply_deleted(available_time)
+        hash = $redis.hgetall("topic_reply:#{available_time.strftime('%Y%m%d')}")
+        expect(hash["topic:#{t.id}"]).to eq("11")
+      end
+    end
+
+    context "when the redis key not exists" do
+      it "should do nothing" do
+         old_time = Time.now - 1.year
+         t.log_reply_deleted(old_time)
+         expect({}). to eq($redis.hgetall("topic_reply:#{old_time.strftime('%Y%m%d')}"))
+      end
+    end
+
+  end
+
   describe "calculate hot score" do
     let(:t1) { FactoryGirl.create(:topic, :created_at => Time.now) }
     let(:t2) { FactoryGirl.create(:topic, :created_at => Time.now - 1.day) }
@@ -228,9 +256,9 @@ describe Topic, :type => :model do
     let(:t7) { FactoryGirl.create(:topic, :created_at => Time.now - 6.day) }
 
     before(:each) do
+      $redis.flushall
       load File.expand_path("../../../lib/tasks/hot_topic.rake", __FILE__)
       Rake::Task.define_task(:environment)
-      # Rake::Task['hot_topic:say_hello'].invoke
     end
     context "calculate weekly hot" do
       it "should work" do

@@ -20,16 +20,9 @@
 # Learn more: http://github.com/javan/whenever
 
 every 1.hours do
-  # runner "Topic.calculate_hot_weekly"
   rake "hot_topic:count_hot_weekly"
 end
 
 every 10.minutes do
-  # runner "Topic.calculate_hot_daily"
   rake "hot_topic:count_hot_daily"
-end
-
-every 1.minutes do
-  # runner "Topic.say_hello"
-  rake "hot_topic:say_hello", :environment => :development
 end
