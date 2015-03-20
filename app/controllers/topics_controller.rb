@@ -52,6 +52,16 @@ class TopicsController < ApplicationController
     render action: 'index'
   end
 
+  %W(weekly daily).each do |name|
+    define_method("hot_#{name}") do
+      hot_ids = $redis.zrevrange("current_hot_#{name}", 0, 99).map(&:to_i) #, params[:page].nil? ? per_page : params[:page].to_i * per_page
+      @topics = Topic.fields_for_list.includes(:user).find(hot_ids).sort_by{ |m| hot_ids.index(m.id) }
+      @topics = @topics.paginate(page: params[:page], per_page: 15, total_entries: @topics.length)
+      set_seo_meta [t('topics.topic_list.recent'), t('menu.topics')].join(' &raquo; ')
+      render action: 'index'
+    end
+  end
+
   def excellent
     @topics = Topic.excellent.recent.fields_for_list.includes(:user)
     @topics = @topics.paginate(page: params[:page], per_page: 15, total_entries: 1500)
@@ -62,7 +72,10 @@ class TopicsController < ApplicationController
 
   def show
     @topic = Topic.without_body.find(params[:id])
+    # binding.pry
     @topic.hits.incr(1)
+    # 记录被浏览时的时间，以便统计热贴
+    @topic.log_viewed
     @node = @topic.node
     @show_raw = params[:raw] == '1'
 
@@ -73,18 +86,18 @@ class TopicsController < ApplicationController
 
     @replies = @topic.replies.unscoped.without_body.asc(:_id)
     @replies = @replies.paginate(page: @page, per_page: @per_page)
-    
+
     check_current_user_status_for_topic
     set_special_node_active_menu
-    
+
     set_seo_meta "#{@topic.title} &raquo; #{t("menu.topics")}"
 
     fresh_when(etag: [@topic, @has_followed, @has_favorited, @replies, @node, @show_raw])
   end
-  
+
   def check_current_user_status_for_topic
     return false if not current_user
-    
+
     # 找出用户 like 过的 Reply，给 JS 处理 like 功能的状态
     @user_liked_reply_ids = []
     @replies.each { |r| @user_liked_reply_ids << r.id if r.liked_user_ids.index(current_user.id) != nil }
@@ -95,7 +108,7 @@ class TopicsController < ApplicationController
     # 是否收藏
     @has_favorited = current_user.favorite_topic_ids.index(@topic.id) == nil
   end
-  
+
   def set_special_node_active_menu
     case @node.try(:id)
     when Node.jobs_id
@@ -172,7 +185,7 @@ class TopicsController < ApplicationController
     current_user.favorite_topic(params[:id])
     render text: '1'
   end
-  
+
   def unfavorite
     current_user.unfavorite_topic(params[:id])
     render text: '1'

@@ -29,6 +29,20 @@ describe TopicsController, :type => :controller do
     end
   end
 
+  describe ":hot_weekly" do
+    it "should have a weekly hot action" do
+      get :hot_weekly
+      expect(response).to be_success
+    end
+  end
+
+  describe ":hot_daily" do
+    it "should have a daily hot action" do
+      get :hot_daily
+      expect(response).to be_success
+    end
+  end
+
   describe ":node" do
 
     it "should have a node action" do

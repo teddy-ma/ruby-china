@@ -10,7 +10,7 @@
           <%= render partial: "topics/topic", collection: @suggest_topics, locals: { suggest: true } %>
         <% end %>
       <% end %>
-      
+
       <% cache(@topics) do %>
         <%= render partial: "topics/topic", collection: @topics, locals: { suggest: false } %>
       <% end %>

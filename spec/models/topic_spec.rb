@@ -1,5 +1,6 @@
 # coding: utf-8
 require 'rails_helper'
+require 'rake'
 
 describe Topic, :type => :model do
   let(:topic) { FactoryGirl.create(:topic) }
@@ -171,6 +172,79 @@ describe Topic, :type => :model do
         r1 = Factory(:reply, topic: t)
         expect(t.update_deleted_last_reply(r0)).to be_falsey
         expect(t.last_reply_id).to eq r1.id
+      end
+    end
+  end
+
+  describe "#log_viewed" do
+    let(:t) { Factory(:topic) }
+    before(:each) do
+      $redis.flushall
+    end
+    context "when redis key is nil" do
+      it "should work" do
+        t.log_viewed
+        weekly_view_hash = $redis.hgetall("topic_view:#{Time.now.strftime('%Y%m%d')}")
+        daily_view_hash  = $redis.hgetall("topic_view:#{Time.now.strftime('%Y%m%d%H')}")
+        expect(weekly_view_hash["topic:#{t.id}"]).to eq("1")
+        expect(daily_view_hash["topic:#{t.id}"]).to eq("1")
+      end
+    end
+
+    context "when topic viewed again" do
+      it "should plus one to the value" do
+        t.log_viewed
+        t.log_viewed
+        weekly_view_hash = $redis.hgetall("topic_view:#{Time.now.strftime('%Y%m%d')}")
+        daily_view_hash  = $redis.hgetall("topic_view:#{Time.now.strftime('%Y%m%d%H')}")
+        expect(weekly_view_hash["topic:#{t.id}"]).to eq("2")
+        expect(daily_view_hash["topic:#{t.id}"]).to eq("2")
+      end
+    end
+  end
+
+  describe "#log_replyed" do
+    let(:t) { Factory(:topic) }
+    # let(:r) { Factory :reply, :topic => t }
+    before(:each) do
+      $redis.flushall
+    end
+    context "when the topic is first time replyed" do
+      it "should work" do
+        t.log_replyed
+        hash = $redis.hgetall("topic_reply:#{Time.now.strftime('%Y%m%d')}")
+        expect(hash["topic:#{t.id}"]).to eq("1")
+      end
+    end
+  end
+
+  describe "calculate hot score" do
+    let(:t1) { FactoryGirl.create(:topic, :created_at => Time.now) }
+    let(:t2) { FactoryGirl.create(:topic, :created_at => Time.now - 1.day) }
+    let(:t3) { FactoryGirl.create(:topic, :created_at => Time.now - 2.day) }
+    let(:t4) { FactoryGirl.create(:topic, :created_at => Time.now - 3.day) }
+    let(:t5) { FactoryGirl.create(:topic, :created_at => Time.now - 4.day) }
+    let(:t6) { FactoryGirl.create(:topic, :created_at => Time.now - 5.day) }
+    let(:t7) { FactoryGirl.create(:topic, :created_at => Time.now - 6.day) }
+
+    before(:each) do
+      load File.expand_path("../../../lib/tasks/hot_topic.rake", __FILE__)
+      Rake::Task.define_task(:environment)
+      # Rake::Task['hot_topic:say_hello'].invoke
+    end
+    context "calculate weekly hot" do
+      it "should work" do
+        (1..7).each do |i|
+          i.times do
+            eval("t#{i}.log_replyed")
+          end
+        end
+        hash = $redis.hgetall("topic_reply:#{Time.now.strftime('%Y%m%d')}")
+        expect(hash["topic:#{t1.id}"]).to eq("1")
+        expect(hash["topic:#{t7.id}"]).to eq("7")
+        Rake::Task['hot_topic:count_hot_weekly'].invoke
+        expect([t7.id,t6.id,t5.id,t4.id,t3.id,t2.id,t1.id].map(&:to_s))
+          .to eq($redis.zrevrange("current_hot_weekly", 0, 6))
       end
     end
   end

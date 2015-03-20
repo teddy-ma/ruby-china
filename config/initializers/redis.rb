@@ -15,3 +15,6 @@ end
 Sidekiq.configure_client do |config|
   config.redis = { namespace: 'sidekiq', url: sidekiq_url }
 end
+
+# To clear out the db before each test
+$redis.flushdb if Rails.env == "test"

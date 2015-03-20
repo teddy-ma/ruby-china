@@ -35,7 +35,7 @@ gem 'mongoid-rails'
 gem 'mongoid_auto_increment_id', '0.6.4'
 gem 'mongoid_rails_migrations', '1.0.0'
 
-# 用户系统 
+# 用户系统
 gem 'devise', '~> 3.4.0'
 gem 'devise-encryptable', '0.1.2'
 
@@ -73,6 +73,8 @@ gem 'settingslogic', '~> 2.0.9'
 gem 'sidekiq', '2.17.7'
 # Sidekiq Web
 gem 'sinatra', '>= 1.3.0', :require => nil
+# 定时任务
+gem 'whenever', :require => false
 
 gem 'faye-rails','1.0.0'
 
@@ -116,6 +118,7 @@ group :development, :test do
   gem 'chunky_png', '1.2.8', require: false
 
   gem 'jasmine-rails', '~> 0.10.2'
+  gem 'pry-byebug'
 end
 
 group :production do

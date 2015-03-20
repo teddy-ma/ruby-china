@@ -11,6 +11,7 @@ class RepliesController < ApplicationController
 
     if @reply.save
       current_user.read_topic(@topic)
+      @topic.log_replyed
       @msg = t('topics.reply_success')
     else
       @msg = @reply.errors.full_messages.join('<br />')
@@ -34,6 +35,7 @@ class RepliesController < ApplicationController
   def destroy
     @reply = Reply.find(params[:id])
     if @reply.destroy
+      @topic.log_reply_deleted(@reply.created_at)
       redirect_to(topic_path(@reply.topic_id), notice: '回帖删除成功。')
     else
       redirect_to(topic_path(@reply.topic_id), alert: '程序异常，删除失败。')
