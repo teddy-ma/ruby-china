@@ -8,7 +8,9 @@ namespace :hot_topic do
   task count_hot_daily: :environment do
     calculate_hot_daily
   end
+
 end
+
 
 def calculate_hot_weekly
   today = Time.now.to_date
@@ -17,9 +19,8 @@ def calculate_hot_weekly
   (a_week_ago..today).each_with_index do |date, i|
     calculate_by_datetime_from_redis(hash, date, i, '%Y%m%d')
   end
-  # 这个 hash 按照 value 的值排序， 或者直接扔 redis 里让 redis 帮忙排序
+  $redis.del("current_hot_weekly")
   hash.map { |k,v| $redis.zadd "current_hot_weekly", v, k.split(":").last }
-  # 取的时候直接 zrange current_hot_weekly 0 99
 end
 
 def calculate_hot_daily
@@ -27,6 +28,7 @@ def calculate_hot_daily
   (DateTime.now - 1.day).step((DateTime.now), 1.0/24).each_with_index do |date_with_hour, i|
     calculate_by_datetime_from_redis(hash, date_with_hour, i, '%Y%m%d%H')
   end
+  $redis.del("current_hot_daily")
   hash.map { |k,v| $redis.zadd "current_hot_daily", v, k.split(":").last }
 end
 

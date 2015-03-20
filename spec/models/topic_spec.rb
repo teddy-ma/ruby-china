@@ -227,7 +227,6 @@ describe Topic, :type => :model do
 
     context "when the redis key exists" do
       it "should minus one" do
-
         available_time = Time.now - 1.day
         $redis.hset("topic_reply:#{available_time.strftime('%Y%m%d')}", "topic:#{t.id}", "12")
         t.log_reply_deleted(available_time)
@@ -243,7 +242,6 @@ describe Topic, :type => :model do
          expect({}). to eq($redis.hgetall("topic_reply:#{old_time.strftime('%Y%m%d')}"))
       end
     end
-
   end
 
   describe "calculate hot score" do
@@ -255,11 +253,17 @@ describe Topic, :type => :model do
     let(:t6) { FactoryGirl.create(:topic, :created_at => Time.now - 5.day) }
     let(:t7) { FactoryGirl.create(:topic, :created_at => Time.now - 6.day) }
 
+    load File.expand_path("../../../lib/tasks/hot_topic.rake", __FILE__)
+    Rake::Task.define_task(:environment)
+
     before(:each) do
       $redis.flushall
-      load File.expand_path("../../../lib/tasks/hot_topic.rake", __FILE__)
-      Rake::Task.define_task(:environment)
     end
+
+    after(:each) do
+      $redis.flushall
+    end
+
     context "calculate weekly hot" do
       it "should work" do
         (1..7).each do |i|
@@ -275,6 +279,19 @@ describe Topic, :type => :model do
           .to eq($redis.zrevrange("current_hot_weekly", 0, 6))
       end
     end
+
+    # FIXME: it looks that two rake task will affect each other
+    # context "not first time calculate" do
+    #   it "should delete old data" do
+    #
+    #     $redis.zadd("current_hot_weekly", 1118, 18)
+    #     $redis.zadd("current_hot_weekly", 1120, 20)
+    #
+    #     Rake::Task['hot_topic:count_hot_weekly'].invoke
+    #     expect($redis.zrevrange("current_hot_weekly", 0, 1)). to eq([])
+    #
+    #   end
+    # end
   end
 
 end
